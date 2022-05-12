@@ -47,9 +47,32 @@ RENAMING = {'createdOn': 'erstellt_datum', 'modifiedBy': 'bearbeitet_von', 'modi
 
 
 def main() -> int:
+    df_orders_comma = None
+    df_orders_semi = None
     root_directory = create_file_paths()
     check_if_file_exists(root_directory)
-    df_orders = pd.read_csv(root_directory + os.sep + FILENAME_ORDERS_CSV, dtype=str)
+    try:
+        print("Versuche csv mit separator ; zu laden")
+        df_orders_semi = pd.read_csv(root_directory + os.sep + FILENAME_ORDERS_CSV, sep=';', dtype=str)
+    except pd.errors.ParserError:
+        print("konnte csv nicht mit ; separator laden")
+    except UnicodeDecodeError:
+        raise Exception("nur utf-8 csv files sind unterstützt")
+    try:
+        print("Versuche csv mit separator , zu laden")
+        df_orders_comma = pd.read_csv(root_directory + os.sep + FILENAME_ORDERS_CSV, sep=',', dtype=str)
+    except pd.errors.ParserError:
+        print("konnte csv nicht mit , separator laden")
+    except UnicodeDecodeError:
+        raise Exception("nur utf-8 csv files sind unterstützt")
+    if df_orders_semi is not None:
+        df_orders = df_orders_semi.copy()
+        print("csv wurde mit separator ; geladen")
+    elif df_orders_comma is not None:
+        df_orders = df_orders_comma.copy()
+        print("csv wurde mit separator , geladen")
+    else:
+        raise Exception("konnte csv nicht laden...")
     # rename cols
     df_orders.rename(
         columns=RENAMING, inplace=True)
@@ -70,6 +93,8 @@ def main() -> int:
     check_if_output_folder_exists(root_directory)
     # save transformed data
     # existing files will be overridden
+    print("vorgang erfolgreich transformiertes csv wird gespeichert im ouput ordner unter dem namen "
+          "orders_transformiert.csv")
     df_orders_final.to_csv(root_directory + os.sep + FOLDER_OUTPUT + os.sep + FILENAME_OUTPUT)
     # only works if xlsxwirter is installed
     # df_orders_final.to_excel(FOLDER_OUTPUT + "//orders_transformiert.xlsx", engine="xlsxwriter")
@@ -88,7 +113,7 @@ def check_if_file_exists(root_dir):
         print("Kann orders.csv nicht finden... Stelle sicher, dass sich orders.csv im gleichen Verzeichnis befindet.")
     finally:
         f.close()
-    return 0
+    return 1
 
 
 def check_if_output_folder_exists(root_dir):
